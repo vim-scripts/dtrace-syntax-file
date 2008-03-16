@@ -1,0 +1,5 @@
+This is a mirror of http://www.vim.org/scripts/script.php?script_id=2190
+
+This file provides excessive syntax highlighting for files written in the D language that's used with dtrace. A description of the D file format can be found at http://docs.sun.com/app/docs/doc/817-6223.
+
+Version 1.5 of this script is included in the official vim7.2 distribution.
