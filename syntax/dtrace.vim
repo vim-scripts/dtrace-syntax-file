@@ -2,14 +2,9 @@
 " language, I call this script dtrace.vim instead of d.vim.
 " Language: D script as described in "Solaris Dynamic Tracing Guide",
 "           http://docs.sun.com/app/docs/doc/817-6223
-" Version: 1.0
-" Last Change: 2008/03/16
+" Version: 1.1
+" Last Change: 2008/03/19
 " Maintainer: Nicolas Weber <nicolasweber@gmx.de>
-"
-" Missing stuff:
-" * highlight valid #pragma D options
-" * highlight aggregation var names
-
 
 if version < 600
   syntax clear
@@ -25,6 +20,8 @@ else
   unlet b:current_syntax
 endif
 
+setlocal iskeyword+=@,$
+
 syn clear cCommentL  " dtrace doesn't support // style comments
 
 " Probe descriptors need explicit matches, so that keywords in probe
@@ -32,6 +29,34 @@ syn clear cCommentL  " dtrace doesn't support // style comments
 syn match dtraceStatement "^\S\{-}:\S\{-}:\S\{-}:\S\{-}$"
 
 syn region dtracePredicate start=+/+ end=+/+
+  "contains=ALLBUT,dtraceOption  " this lets the region contain too much stuff
+
+" Pragmas.
+" dtrace seems not to support whitespace before or after the '='.  dtrace
+" supports only one option per #pragma, and no continuations of #pragma over
+" several lines with '\'.
+" Note that dtrace treats units (Hz etc) as case-insenstive, we allow only
+" sane unit capitalization in this script (ie 'ns', 'us', 'ms', 's' have to be
+" small, Hertz can be 'Hz' or 'hz')
+" XXX: "cpu" is always highlighted as builtin var, not as option
+
+"   auto or manual: bufresize
+syn match dtraceOption contained "bufresize=\%(auto\|manual\)\s*$"
+
+"   scalar: cpu jstackframes jstackstrsize nspec stackframes stackindent ustackframes
+syn match dtraceOption contained "\%(cpu\|jstackframes\|jstackstrsize\|nspec\|stackframes\|stackindent\|ustackframes\)=\d\+\s*$"
+
+"   size: aggsize bufsize dynvarsize specsize strsize 
+"   size defaults to something if no unit is given (ie., having no unit is ok)
+syn match dtraceOption contained "\%(aggsize\|bufsize\|dynvarsize\|specsize\|strsize\)=\d\+\%(k\|m\|g\|t\|K\|M\|G\|T\)\=\s*$"
+
+"   time: aggrate cleanrate statusrate switchrate
+"   time defaults to hz if no unit is given
+syn match dtraceOption contained "\%(aggrate\|cleanrate\|statusrate\|switchrate\)=\d\+\%(hz\|Hz\|ns\|us\|ms\|s\)\=\s*$"
+
+"   No type: defaultargs destructive flowindent grabanon quiet
+syn match dtraceOption contained "\%(defaultargs\|destructive\|flowindent\|grabanon\|quiet\)\s*$"
+
 
 " Turn reserved but unspecified keywords into errors
 syn keyword dtraceReservedKeyword auto break case continue counter default do
@@ -52,8 +77,9 @@ syn keyword dtraceIdentifier vtimestamp walltimestamp
 syn keyword dtraceIdentifier ustackdepth
 
 " Macro Variables
-syn match dtraceConstant     "$[0-9]\+" "$egid" "$euid" "$gid" "$pgid" "$ppid"
-syn match dtraceConstant     "$projid" "$sid" "$target" "$taskid" "$uid"
+syn match dtraceConstant     "$[0-9]\+"
+syn keyword dtraceConstant    $egid $euid $gid $pgid $ppid
+syn keyword dtraceConstant    $projid $sid $target $taskid $uid
 
 " Data Recording Actions
 syn keyword dtraceFunction   trace tracemem printf printa stack ustack jstack
@@ -105,6 +131,7 @@ if version >= 508 || !exists("did_triangle_syn_inits")
   HiLink dtraceOperator Operator
   HiLink dtraceComment Comment
   HiLink dtraceNumber Number
+  HiLink dtraceOption Identifier
 
   delcommand HiLink
 endif
