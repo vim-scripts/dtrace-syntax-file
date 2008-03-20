@@ -2,9 +2,13 @@
 " language, I call this script dtrace.vim instead of d.vim.
 " Language: D script as described in "Solaris Dynamic Tracing Guide",
 "           http://docs.sun.com/app/docs/doc/817-6223
-" Version: 1.1
-" Last Change: 2008/03/19
+" Version: 1.2
+" Last Change: 2008/03/20
 " Maintainer: Nicolas Weber <nicolasweber@gmx.de>
+
+" dtrace lexer and parser are at
+" http://src.opensolaris.org/source/xref/onnv/onnv-gate/usr/src/lib/libdtrace/common/dt_lex.l
+" http://src.opensolaris.org/source/xref/onnv/onnv-gate/usr/src/lib/libdtrace/common/dt_grammar.y
 
 if version < 600
   syntax clear
@@ -24,11 +28,20 @@ setlocal iskeyword+=@,$
 
 syn clear cCommentL  " dtrace doesn't support // style comments
 
+" First line may start with #!, also make sure a '-s' flag is somewhere in
+" that line.
+syn match dtraceComment "\%^#!.*-s.*"
+
 " Probe descriptors need explicit matches, so that keywords in probe
 " descriptors don't show up as errors
-syn match dtraceStatement "^\S\{-}:\S\{-}:\S\{-}:\S\{-}$"
+syn match dtraceStatement "\S\{-}:\S\{-}:\S\{-}:\S\{-}\s*\%(,\s*\S\{-}:\S\{-}:\S\{-}:\S\{-}\s*\)*\ze\%({\|/\|\_$\)"
 
-syn region dtracePredicate start=+/+ end=+/+
+" Note: We have to be careful to not make this match /* */ comments.
+" Also be careful not to eat `c = a / b; b = a / 2;`. We use the same
+" technique as the dtrace lexer: a predicate has to be followed by {, ;, or
+" EOF.
+" This regex doesn't allow a divison operator in the predicate.
+syn match dtracePredicate "/[^*]\=\_[^/]*/\ze\_s\%({\|;\|\%$\)"
   "contains=ALLBUT,dtraceOption  " this lets the region contain too much stuff
 
 " Pragmas.
