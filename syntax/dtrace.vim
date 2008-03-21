@@ -2,8 +2,8 @@
 " language, I call this script dtrace.vim instead of d.vim.
 " Language: D script as described in "Solaris Dynamic Tracing Guide",
 "           http://docs.sun.com/app/docs/doc/817-6223
-" Version: 1.2
-" Last Change: 2008/03/20
+" Version: 1.3
+" Last Change: 2008/03/21
 " Maintainer: Nicolas Weber <nicolasweber@gmx.de>
 
 " dtrace lexer and parser are at
@@ -33,15 +33,19 @@ syn clear cCommentL  " dtrace doesn't support // style comments
 syn match dtraceComment "\%^#!.*-s.*"
 
 " Probe descriptors need explicit matches, so that keywords in probe
-" descriptors don't show up as errors
-syn match dtraceStatement "\S\{-}:\S\{-}:\S\{-}:\S\{-}\s*\%(,\s*\S\{-}:\S\{-}:\S\{-}:\S\{-}\s*\)*\ze\%({\|/\|\_$\)"
+" descriptors don't show up as errors. Note that this regex detects probes
+" as "something with three ':' in it". This works in practice, but it's not
+" really correct. Also add special case code for BEGIN, END and ERROR, since
+" they are common.
+let s:oneProbe = '\%(BEGIN\|END\|ERROR\|\S\{-}:\S\{-}:\S\{-}:\S\{-}\)\_s*'
+exec 'syn match dtraceProbe "'.s:oneProbe.'\%(,\_s*'.s:oneProbe.'\)*\ze\%({\|\/\|\%$\)"'
 
 " Note: We have to be careful to not make this match /* */ comments.
 " Also be careful not to eat `c = a / b; b = a / 2;`. We use the same
 " technique as the dtrace lexer: a predicate has to be followed by {, ;, or
 " EOF.
 " This regex doesn't allow a divison operator in the predicate.
-syn match dtracePredicate "/[^*]\=\_[^/]*/\ze\_s\%({\|;\|\%$\)"
+syn match dtracePredicate "/[^*]\=\_[^/]*/\ze\_s*\%({\|;\|\%$\)"
   "contains=ALLBUT,dtraceOption  " this lets the region contain too much stuff
 
 " Pragmas.
@@ -67,8 +71,8 @@ syn match dtraceOption contained "\%(aggsize\|bufsize\|dynvarsize\|specsize\|str
 "   time defaults to hz if no unit is given
 syn match dtraceOption contained "\%(aggrate\|cleanrate\|statusrate\|switchrate\)=\d\+\%(hz\|Hz\|ns\|us\|ms\|s\)\=\s*$"
 
-"   No type: defaultargs destructive flowindent grabanon quiet
-syn match dtraceOption contained "\%(defaultargs\|destructive\|flowindent\|grabanon\|quiet\)\s*$"
+"   No type: defaultargs destructive flowindent grabanon quiet rawbytes
+syn match dtraceOption contained "\%(defaultargs\|destructive\|flowindent\|grabanon\|quiet\|rawbytes\)\s*$"
 
 
 " Turn reserved but unspecified keywords into errors
@@ -78,7 +82,7 @@ syn keyword dtraceReservedKeyword register restrict return static switch while
 
 " Add dtrace-specific stuff
 syn keyword dtraceOperator   sizeof offsetof stringof xlate
-syn keyword dtraceStatement  self inline xlate translator
+syn keyword dtraceStatement  self inline xlate this translator
 
 " Builtin variables
 syn keyword dtraceIdentifier arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 
@@ -135,6 +139,7 @@ if version >= 508 || !exists("did_triangle_syn_inits")
   HiLink dtraceReservedKeyword Error
 
   HiLink dtracePredicate String
+  HiLink dtraceProbe dtraceStatement
   HiLink dtraceStatement Statement
   HiLink dtraceConstant Constant
   HiLink dtraceIdentifier Identifier
