@@ -2,8 +2,8 @@
 " language, I call this script dtrace.vim instead of d.vim.
 " Language: D script as described in "Solaris Dynamic Tracing Guide",
 "           http://docs.sun.com/app/docs/doc/817-6223
-" Version: 1.3
-" Last Change: 2008/03/21
+" Version: 1.4
+" Last Change: 2008/03/30
 " Maintainer: Nicolas Weber <nicolasweber@gmx.de>
 
 " dtrace lexer and parser are at
@@ -37,15 +37,22 @@ syn match dtraceComment "\%^#!.*-s.*"
 " as "something with three ':' in it". This works in practice, but it's not
 " really correct. Also add special case code for BEGIN, END and ERROR, since
 " they are common.
+" Be careful not to detect '/*some:::node*/\n/**/' as probe, as it's
+" commented out.
+" XXX: This allows a probe description to end with ',', even if it's not
+" followed by another probe.
+" XXX: This doesn't work if followed by a comment.
 let s:oneProbe = '\%(BEGIN\|END\|ERROR\|\S\{-}:\S\{-}:\S\{-}:\S\{-}\)\_s*'
-exec 'syn match dtraceProbe "'.s:oneProbe.'\%(,\_s*'.s:oneProbe.'\)*\ze\%({\|\/\|\%$\)"'
+exec 'syn match dtraceProbe "'.s:oneProbe.'\%(,\_s*'.s:oneProbe.'\)*\ze\_s\%({\|\/[^*]\|\%$\)"'
 
 " Note: We have to be careful to not make this match /* */ comments.
 " Also be careful not to eat `c = a / b; b = a / 2;`. We use the same
 " technique as the dtrace lexer: a predicate has to be followed by {, ;, or
-" EOF.
+" EOF. Also note that dtrace doesn't allow an empty predicate // (we do).
 " This regex doesn't allow a divison operator in the predicate.
-syn match dtracePredicate "/[^*]\=\_[^/]*/\ze\_s*\%({\|;\|\%$\)"
+" Make sure that this matches the empty predicate as well.
+" XXX: This doesn't work if followed by a comment.
+syn match dtracePredicate "/\*\@!\_[^/]*/\ze\_s*\%({\|;\|\%$\)"
   "contains=ALLBUT,dtraceOption  " this lets the region contain too much stuff
 
 " Pragmas.
@@ -127,31 +134,22 @@ syn keyword dtraceType pid_t id_t
 
 
 " Define the default highlighting.
-" For version 5.7 and earlier: only when not done already
-" For version 5.8 and later: only when an item doesn't have highlighting yet
-if version >= 508 || !exists("did_triangle_syn_inits")
-  if version < 508
-    let did_dtrace_syn_inits = 1
-    command -nargs=+ HiLink hi link <args>
-  else
-    command -nargs=+ HiLink hi def link <args>
-  endif
-  HiLink dtraceReservedKeyword Error
+" We use `hi def link` directly, this requires 5.8.
+if version >= 508
+  hi def link dtraceReservedKeyword Error
 
-  HiLink dtracePredicate String
-  HiLink dtraceProbe dtraceStatement
-  HiLink dtraceStatement Statement
-  HiLink dtraceConstant Constant
-  HiLink dtraceIdentifier Identifier
-  HiLink dtraceAggregatingFunction dtraceFunction
-  HiLink dtraceFunction Function
-  HiLink dtraceType Type
-  HiLink dtraceOperator Operator
-  HiLink dtraceComment Comment
-  HiLink dtraceNumber Number
-  HiLink dtraceOption Identifier
-
-  delcommand HiLink
+  hi def link dtracePredicate String
+  hi def link dtraceProbe dtraceStatement
+  hi def link dtraceStatement Statement
+  hi def link dtraceConstant Constant
+  hi def link dtraceIdentifier Identifier
+  hi def link dtraceAggregatingFunction dtraceFunction
+  hi def link dtraceFunction Function
+  hi def link dtraceType Type
+  hi def link dtraceOperator Operator
+  hi def link dtraceComment Comment
+  hi def link dtraceNumber Number
+  hi def link dtraceOption Identifier
 endif
 
 let b:current_syntax = "dtrace"
